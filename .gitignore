@@ -1,0 +1,25 @@
+# Dépendances
+node_modules/
+EventFire/backend/node_modules/
+EventFire/frontend/node_modules/
+
+# Variables d'environnement (CONFIDENTIEL)
+.env
+EventFire/backend/.env
+EventFire/frontend/.env
+
+# Build frontend
+EventFire/frontend/dist/
+EventFire/frontend/dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
