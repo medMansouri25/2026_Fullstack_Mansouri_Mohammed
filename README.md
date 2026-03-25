@@ -1,6 +1,6 @@
 # EventFire
 
-Application web full-stack de gestion d'événements construite avec la stack **MERN** (MongoDB, Express, React, Node.js).
+Application web full-stack de gestion et réservation d'événements culturels, construite avec la stack **MERN** (MongoDB, Express, React, Node.js).
 
 ---
 
@@ -9,12 +9,11 @@ Application web full-stack de gestion d'événements construite avec la stack **
 - [Aperçu du projet](#aperçu-du-projet)
 - [Stack technique](#stack-technique)
 - [Prérequis](#prérequis)
-- [Structure du projet](#structure-du-projet)
+- [Installation](#installation)
+- [Configuration des variables d'environnement](#configuration-des-variables-denvironnement)
 - [Lancer le projet](#lancer-le-projet)
-  - [1. Démarrer la base de données (Docker)](#1-démarrer-la-base-de-données-docker)
-  - [2. Lancer le Backend](#2-lancer-le-backend)
-  - [3. Lancer le Frontend](#3-lancer-le-frontend)
-- [Variables d'environnement](#variables-denvironnement)
+- [Comptes de test](#comptes-de-test)
+- [Structure du projet](#structure-du-projet)
 - [API Backend](#api-backend)
 - [Scripts disponibles](#scripts-disponibles)
 - [Auteur](#auteur)
@@ -23,177 +22,260 @@ Application web full-stack de gestion d'événements construite avec la stack **
 
 ## Aperçu du projet
 
-**EventFire** est une application permettant de créer, gérer et consulter des événements. Le projet adopte une architecture découplée :
+**EventFire** est une plateforme complète permettant de :
 
-- Un **backend REST API** en Node.js/Express qui gère la logique métier et communique avec MongoDB.
-- Un **frontend React** qui consomme l'API via Axios.
-- Une instance **MongoDB** isolée dans un conteneur Docker.
+- **Côté Admin** : créer, modifier et supprimer des événements, consulter un tableau de bord avec statistiques (billets vendus, revenus, taux d'occupation)
+- **Côté Client** : parcourir les événements, réserver des places, consulter et annuler ses réservations
+- **Authentification** : connexion email/mot de passe ou via Google OAuth (clients uniquement)
+
+Architecture découplée : backend REST API + frontend React communiquant via Axios.
 
 ---
 
 ## Stack technique
 
-| Couche          | Technologie                    | Version  |
-|-----------------|--------------------------------|----------|
-| Runtime         | Node.js                        | >= 18    |
-| Backend         | Express.js                     | ^5.2.1   |
-| Base de données | MongoDB (via Mongoose)         | ^9.3.0   |
-| Auth            | JSON Web Tokens (jsonwebtoken) | ^9.0.3   |
-| Chiffrement     | bcryptjs                       | ^3.0.3   |
-| Frontend        | React                          | ^19.2.0  |
-| Build tool      | Vite                           | ^7.3.1   |
-| Routing         | React Router DOM               | ^7.13.1  |
-| HTTP client     | Axios                          | ^1.13.6  |
-| Container       | Docker + Docker Compose        | —        |
+| Couche          | Technologie                     | Version   |
+|-----------------|---------------------------------|-----------|
+| Runtime         | Node.js                         | >= 18     |
+| Backend         | Express.js                      | ^5.2.1    |
+| Base de données | MongoDB (via Mongoose)          | ^9.3.0    |
+| Auth            | JWT + Google OAuth 2.0          | —         |
+| Chiffrement     | bcryptjs                        | ^3.0.3    |
+| Email           | Nodemailer (Mailtrap)           | ^8.0.3    |
+| Upload images   | Multer                          | ^2.1.1    |
+| Sécurité        | Helmet, express-rate-limit      | —         |
+| Frontend        | React + Vite                    | ^19 / ^7  |
+| Routing         | React Router DOM                | ^7.13.1   |
+| HTTP client     | Axios                           | ^1.13.6   |
+| Container DB    | Docker                          | —         |
 
 ---
 
 ## Prérequis
 
-Avant de démarrer, assurez-vous d'avoir installé sur votre machine :
-
 - [Node.js](https://nodejs.org/) >= 18.x
 - [npm](https://www.npmjs.com/) >= 9.x
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (pour MongoDB)
+- Un compte [Google Cloud Console](https://console.cloud.google.com/) (pour Google OAuth)
+- Un compte [Mailtrap](https://mailtrap.io/) (pour les emails de confirmation — facultatif en dev)
+
+---
+
+## Installation
+
+### 1. Cloner le dépôt
+
+```bash
+git clone https://github.com/medMansouri25/2026_Fullstack_Mansouri_Mohammed.git
+cd 2026_Fullstack_Mansouri_Mohammed
+```
+
+### 2. Installer les dépendances
+
+```bash
+# Backend
+cd EventFire/backend
+npm install
+
+# Frontend (nouveau terminal)
+cd EventFire/frontend
+npm install
+```
+
+---
+
+## Configuration des variables d'environnement
+
+Créez le fichier `EventFire/backend/.env` :
+
+```env
+# Serveur
+PORT=3000
+NODE_ENV=development
+
+# Base de données
+MONGO_URI=mongodb://localhost:27017/eventFire
+
+# JWT
+JWT_SECRET=votre_secret_jwt_long_et_aleatoire
+JWT_EXPIRES_IN=2h
+
+# Google OAuth (https://console.cloud.google.com/)
+GOOGLE_CLIENT_ID=votre_google_client_id
+GOOGLE_CLIENT_SECRET=votre_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+
+# Frontend (CORS)
+FRONTEND_URL=http://localhost:5173
+
+# Email — Mailtrap (https://mailtrap.io/) — facultatif
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=587
+SMTP_USER=votre_user_mailtrap
+SMTP_PASS=votre_pass_mailtrap
+
+# Compte admin (optionnel — par défaut : admin@eventfire.fr / admin123)
+ADMIN_EMAIL=admin@eventfire.fr
+ADMIN_PASSWORD=admin123
+```
+
+> **Important :** Ne commitez jamais le fichier `.env`. Il est listé dans `.gitignore`.
+
+---
+
+## Lancer le projet
+
+### Option A — Lancement automatique (Windows)
+
+Double-cliquer sur **`start.bat`** à la racine du projet. Il démarre MongoDB (Docker), le backend et le frontend automatiquement.
+
+### Option B — Lancement manuel
+
+**1. Démarrer MongoDB via Docker**
+
+```bash
+docker start mongodb
+# Si le conteneur n'existe pas encore :
+docker run -d --name mongodb -p 27017:27017 mongo:latest
+```
+
+**2. Lancer le backend**
+
+```bash
+cd EventFire/backend
+npm run dev
+```
+
+Le backend démarre sur **http://localhost:3000**. Au premier démarrage, le seed s'exécute automatiquement :
+- Création du compte admin (`admin@eventfire.fr` / `admin123`)
+- Insertion de 10 événements de démonstration (si la collection est vide)
+
+**3. Lancer le frontend** (nouveau terminal)
+
+```bash
+cd EventFire/frontend
+npm run dev
+```
+
+L'application est accessible sur **http://localhost:5173**.
+
+---
+
+## Comptes de test
+
+| Rôle  | Email                  | Mot de passe | Accès                        |
+|-------|------------------------|--------------|------------------------------|
+| Admin | `admin@eventfire.fr`   | `admin123`   | Dashboard, gestion événements |
+| Client | S'inscrire via `/register` ou Google OAuth | — | Réservations |
+
+> **Règle admin :** seuls les emails `@eventfire.fr` peuvent se connecter en tant qu'administrateur. Google OAuth est réservé aux clients.
 
 ---
 
 ## Structure du projet
 
 ```
-Projet_full_stack_EventFire/
-├── docker-compose.yml          # Orchestre le conteneur MongoDB
+2026_Fullstack_Mansouri_Mohammed/
+├── docker-compose.yml              # MongoDB via Docker Compose
+├── start.bat                       # Lancement automatique (Windows)
 ├── README.md
-├── Projet dev full stack.pdf
 └── EventFire/
     ├── backend/
-    │   ├── src/
-    │   │   ├── server.js       # Point d'entrée du serveur
-    │   │   ├── app.js          # Configuration Express (middlewares, routes)
-    │   │   ├── config/
-    │   │   │   └── db.js       # Connexion MongoDB via Mongoose
-    │   │   ├── controllers/    # Logique métier des routes
-    │   │   ├── middleware/     # Middlewares (auth JWT, validation...)
-    │   │   ├── models/         # Schémas Mongoose
-    │   │   ├── routes/         # Définition des routes Express
-    │   │   └── utils/          # Fonctions utilitaires
-    │   ├── .env                # Variables d'environnement (ne pas commiter)
-    │   ├── package.json
-    │   └── package-lock.json
+    │   ├── uploads/                # Images uploadées (gitkeep)
+    │   └── src/
+    │       ├── server.js           # Point d'entrée — connectDB + seedAdmin + listen
+    │       ├── app.js              # Express : middlewares, routes, error handler
+    │       ├── config/
+    │       │   ├── db.js           # Connexion MongoDB (Mongoose)
+    │       │   └── passport.js     # Stratégie Google OAuth (Passport.js)
+    │       ├── controllers/
+    │       │   ├── authController.js        # login, register, googleLogin
+    │       │   ├── eventController.js       # CRUD événements
+    │       │   ├── reservationController.js # Réservation, annulation
+    │       │   └── statsController.js       # Statistiques dashboard
+    │       ├── middleware/
+    │       │   ├── authMiddleware.js        # Vérifie le JWT
+    │       │   ├── adminMiddleware.js       # Vérifie le rôle admin
+    │       │   └── security.js             # Helmet, rate-limit, sanitize
+    │       ├── models/
+    │       │   ├── User.js                 # Schéma utilisateur
+    │       │   ├── Event.js                # Schéma événement
+    │       │   └── Reservation.js          # Schéma réservation
+    │       ├── routes/
+    │       │   ├── authRoutes.js
+    │       │   ├── eventRoutes.js
+    │       │   ├── reservationRoutes.js
+    │       │   ├── statsRoutes.js
+    │       │   └── uploadRoutes.js
+    │       └── utils/
+    │           ├── seedAdmin.js    # Seed admin + événements de démo
+    │           └── mailer.js       # Email de confirmation Nodemailer
     └── frontend/
-        ├── public/
-        ├── src/
-        │   ├── main.jsx        # Point d'entrée React
-        │   ├── App.jsx         # Composant racine
-        │   ├── App.css
-        │   └── index.css
-        ├── index.html
-        ├── vite.config.js
-        ├── eslint.config.js
-        ├── package.json
-        └── package-lock.json
+        └── src/
+            ├── main.jsx
+            ├── App.jsx             # Routes React Router
+            ├── context/
+            │   └── AuthContext.jsx # Contexte global auth (token, user, isAdmin)
+            ├── components/
+            │   ├── Navbar.jsx
+            │   ├── EventCard.jsx
+            │   ├── ProtectedRoute.jsx
+            │   └── ui/             # Icônes SVG, ImageUploader, CalendarPicker
+            ├── pages/
+            │   ├── Home.jsx            # Liste des événements (public)
+            │   ├── EventDetails.jsx    # Détail + réservation (public)
+            │   ├── Login.jsx           # Connexion admin / client
+            │   ├── Register.jsx        # Inscription client
+            │   ├── MesReservations.jsx # Espace client
+            │   ├── Dashboard.jsx       # Tableau de bord admin
+            │   ├── AdminEvents.jsx     # Gestion événements (admin)
+            │   └── EventForm.jsx       # Formulaire création/édition
+            └── services/           # Appels API Axios (authService, eventService…)
 ```
-
----
-
-## Lancer le projet
-
-### 1. Démarrer la base de données (Docker)
-
-Depuis la **racine du projet** (là où se trouve `docker-compose.yml`) :
-
-```bash
-docker compose up -d
-```
-
-Cette commande démarre un conteneur MongoDB v7 en arrière-plan :
-
-| Paramètre         | Valeur            |
-|-------------------|-------------------|
-| Image             | `mongo:7`         |
-| Nom du conteneur  | `eventfire_mongo` |
-| Port exposé       | `27017`           |
-| Volume persistant | `mongo_data`      |
-
-Pour vérifier que le conteneur est bien lancé :
-
-```bash
-docker ps
-```
-
-Pour arrêter le conteneur :
-
-```bash
-docker compose down
-```
-
-Pour arrêter et supprimer les données (volume) :
-
-```bash
-docker compose down -v
-```
-
----
-
-### 2. Lancer le Backend
-
-```bash
-cd EventFire/backend
-npm install
-npm run dev
-```
-
-Le serveur démarre sur le port défini dans votre `.env` (ex : `http://localhost:<PORT>`)
-
-- `npm run dev` utilise `nodemon` pour le rechargement automatique lors des modifications.
-- `npm start` lance le serveur sans rechargement automatique (mode production).
-
-> **Note :** Assurez-vous que le conteneur Docker MongoDB est démarré avant de lancer le backend.
-
----
-
-### 3. Lancer le Frontend
-
-Dans un **nouveau terminal** :
-
-```bash
-cd EventFire/frontend
-npm install
-npm run dev
-```
-
-L'application est accessible sur **http://localhost:5173** (port par défaut de Vite).
-
----
-
-## Variables d'environnement
-
-### Backend — `EventFire/backend/.env`
-
-Créez un fichier `.env` dans `EventFire/backend/` avec les variables suivantes :
-
-```env
-# Port d'écoute du serveur Express
-PORT=<port>
-
-# URI de connexion MongoDB
-MONGO_URI=mongodb://localhost:27017/<nom_base>
-
-# Secret pour la signature des tokens JWT (chaîne longue et aléatoire)
-JWT_SECRET=<votre_secret>
-```
-
-> **Important :** Ne commitez jamais le fichier `.env` dans Git. Ajoutez-le à votre `.gitignore`.
 
 ---
 
 ## API Backend
 
-| Méthode | Endpoint | Description           |
-|---------|----------|-----------------------|
-| GET     | `/`      | Health check de l'API |
+### Authentification — `/api/auth`
 
-> Les routes métier (événements, utilisateurs, authentification) sont à implémenter dans `EventFire/backend/src/routes/`.
+| Méthode | Endpoint              | Auth | Description                        |
+|---------|-----------------------|------|------------------------------------|
+| POST    | `/login`              | —    | Connexion email/mot de passe       |
+| POST    | `/register`           | —    | Inscription visiteur               |
+| POST    | `/google`             | —    | Connexion via Google (ID token)    |
+| GET     | `/google/redirect`    | —    | Redirect OAuth Google              |
+| GET     | `/google/callback`    | —    | Callback OAuth Google              |
+
+### Événements — `/api/events`
+
+| Méthode | Endpoint       | Auth         | Description                  |
+|---------|----------------|--------------|------------------------------|
+| GET     | `/`            | —            | Liste tous les événements    |
+| GET     | `/:id`         | —            | Détail d'un événement        |
+| POST    | `/`            | Admin        | Créer un événement           |
+| PUT     | `/:id`         | Admin        | Modifier un événement        |
+| DELETE  | `/:id`         | Admin        | Supprimer un événement       |
+
+### Réservations — `/api/reservations`
+
+| Méthode | Endpoint       | Auth         | Description                            |
+|---------|----------------|--------------|----------------------------------------|
+| POST    | `/`            | Visiteur     | Créer / incrémenter une réservation    |
+| GET     | `/me`          | Visiteur     | Mes réservations                       |
+| DELETE  | `/:id`         | Visiteur     | Annuler une réservation                |
+
+### Statistiques — `/api/stats`
+
+| Méthode | Endpoint | Auth  | Description                          |
+|---------|----------|-------|--------------------------------------|
+| GET     | `/`      | Admin | Statistiques globales du dashboard   |
+
+### Upload — `/api/upload`
+
+| Méthode | Endpoint | Auth  | Description              |
+|---------|----------|-------|--------------------------|
+| POST    | `/`      | Admin | Upload image événement   |
 
 ---
 
@@ -201,22 +283,23 @@ JWT_SECRET=<votre_secret>
 
 ### Backend
 
-| Commande      | Description                                |
-|---------------|--------------------------------------------|
-| `npm start`   | Lance le serveur en mode production        |
-| `npm run dev` | Lance le serveur avec nodemon (hot-reload) |
+| Commande           | Description                                    |
+|--------------------|------------------------------------------------|
+| `npm run dev`      | Serveur avec nodemon (hot-reload)              |
+| `npm start`        | Serveur en mode production                     |
+| `npm run seed`     | Insère les événements de démo (si collection vide) |
+| `npm run seed:reset` | Force la réinsertion des événements de démo  |
 
 ### Frontend
 
-| Commande           | Description                                  |
-|--------------------|----------------------------------------------|
-| `npm run dev`      | Lance le serveur de développement Vite       |
-| `npm run build`    | Compile l'application pour la production     |
-| `npm run preview`  | Prévisualise le build de production en local |
-| `npm run lint`     | Analyse le code avec ESLint                  |
+| Commande           | Description                                    |
+|--------------------|------------------------------------------------|
+| `npm run dev`      | Serveur de développement Vite                  |
+| `npm run build`    | Build de production                            |
+| `npm run preview`  | Prévisualise le build en local                 |
 
 ---
 
 ## Auteur
 
-Projet Full Stack — 4A 2025/2026
+**Mohammed Mansouri** — Projet Full Stack 4A 2025/2026
