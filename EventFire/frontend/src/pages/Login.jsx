@@ -25,6 +25,13 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) { setError('Veuillez remplir tous les champs.'); return; }
+
+    // En mode admin, l'email doit être de la forme [nom]@admin.com
+    if (isAdminMode && !/^[^@]+@eventfire\.fr$/i.test(email)) {
+      setError('Accès admin réservé aux adresses [nom]@admin.com');
+      return;
+    }
+
     setLoading(true); setError('');
     try {
       const data = await loginUser(email, password);
@@ -122,11 +129,16 @@ export default function Login() {
               id="email"
               type="email"
               className="form-input"
-              placeholder={isAdminMode ? 'admin@eventfire.fr' : 'jean@exemple.fr'}
+              placeholder={isAdminMode ? 'nom@eventfire.fr' : 'jean@exemple.fr'}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
               autoComplete="email"
             />
+            {isAdminMode && (
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                Format requis : <strong>nom@eventfire.fr</strong>
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -137,7 +149,7 @@ export default function Login() {
               className="form-input"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
               autoComplete="current-password"
             />
           </div>

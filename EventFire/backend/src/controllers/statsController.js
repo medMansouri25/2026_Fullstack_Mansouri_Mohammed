@@ -11,7 +11,7 @@ const getStats = async (req, res) => {
       top5RevenueResult,
       top5OccupancyResult
     ] = await Promise.all([
-      // Summary: totalEvents, totalRevenue, totalTickets, occupancyRate
+      // Summary: totalEvents, totalRevenue, totalTickets
       Event.aggregate([
         {
           $group: {

@@ -15,6 +15,8 @@ function signToken(user) {
 }
 
 // ── POST /api/auth/login  (email + password) ────────────────────────────────
+const ADMIN_EMAIL_REGEX = /^[^@]+@eventfire\.fr$/i;
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -22,13 +24,22 @@ const login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: 'Email et mot de passe requis' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || !user.password)
       return res.status(401).json({ message: 'Identifiants invalides' });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(401).json({ message: 'Identifiants invalides' });
+
+    // Un admin doit obligatoirement avoir un email @admin.com
+    if (user.role === 'admin' && !ADMIN_EMAIL_REGEX.test(user.email))
+      return res.status(403).json({ message: 'Accès administrateur refusé' });
+
+    // Un email @admin.com sans rôle admin en base → accès refusé
+    if (ADMIN_EMAIL_REGEX.test(user.email) && user.role !== 'admin')
+      return res.status(403).json({ message: 'Compte administrateur non configuré' });
 
     const token = signToken(user);
     res.json({ token, user: { id: user._id, email: user.email, role: user.role, name: user.name, avatar: user.avatar } });
@@ -53,6 +64,10 @@ const googleLogin = async (req, res) => {
     });
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
+
+    // Google OAuth interdit aux emails @admin.com
+    if (ADMIN_EMAIL_REGEX.test(email))
+      return res.status(403).json({ message: 'Les comptes administrateurs ne peuvent pas utiliser Google' });
 
     // Chercher ou créer l'utilisateur
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
@@ -91,6 +106,10 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Nom, email et mot de passe requis' });
     if (password.length < 6)
       return res.status(400).json({ message: 'Le mot de passe doit faire au moins 6 caractères' });
+
+    // Interdire l'inscription avec un email @admin.com
+    if (ADMIN_EMAIL_REGEX.test(email.toLowerCase().trim()))
+      return res.status(403).json({ message: 'Les comptes @admin.com ne peuvent pas s\'inscrire ici' });
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing)

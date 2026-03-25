@@ -17,23 +17,29 @@ const creerReservation = async (req, res) => {
     if (places > placesRestantes)
       return res.status(400).json({ message: `Seulement ${placesRestantes} place(s) disponible(s)` });
 
-    const reservation = await Reservation.create({
-      visiteur: req.user.id,
-      event: eventId,
-      places,
-    });
+    // Si une réservation confirmée existe déjà pour cet événement, on incrémente
+    const existing = await Reservation.findOne({ visiteur: req.user.id, event: eventId, statut: 'confirmée' });
+
+    let reservation;
+    if (existing) {
+      existing.places += places;
+      await existing.save();
+      reservation = existing;
+    } else {
+      reservation = await Reservation.create({ visiteur: req.user.id, event: eventId, places });
+    }
 
     // Mettre à jour les billets vendus
     await Event.findByIdAndUpdate(eventId, { $inc: { billetsVendus: places } });
 
-    // Envoyer l'email de confirmation (non bloquant — une erreur SMTP ne doit pas annuler la résa)
+    // Envoyer l'email de confirmation (non bloquant)
     try {
       await sendConfirmationEmail(req.user.email, req.user.name, event, places);
     } catch (mailErr) {
       console.error('Email non envoyé (réservation OK):', mailErr.message);
     }
 
-    res.status(201).json({ message: 'Réservation confirmée', reservation });
+    res.status(201).json({ message: existing ? 'Réservation mise à jour' : 'Réservation confirmée', reservation });
   } catch (error) {
     console.error('Erreur réservation:', error);
     res.status(500).json({ message: 'Erreur serveur' });

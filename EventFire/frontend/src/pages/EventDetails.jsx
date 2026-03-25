@@ -197,8 +197,8 @@ export default function EventDetails() {
               <span style={{ color: 'var(--green)', fontSize: '2rem', fontWeight: 800 }}>Gratuit</span>
             ) : (
               <>
-                <span className="price-main-euro">€</span>
                 {prix}
+                <span className="price-main-euro"> €</span>
               </>
             )}
           </div>

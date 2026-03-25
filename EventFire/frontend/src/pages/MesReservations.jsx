@@ -83,15 +83,22 @@ export default function MesReservations() {
               opacity: r.statut === 'annulée' ? 0.6 : 1,
             }}>
               {r.event?.image && (
-                <img
-                  src={r.event.image}
-                  alt={r.event.titre}
-                  style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
-                />
+                <Link to={`/events/${r.event._id}`} style={{ flexShrink: 0 }}>
+                  <img
+                    src={r.event.image}
+                    alt={r.event.titre}
+                    style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 8, cursor: 'pointer' }}
+                  />
+                </Link>
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{r.event?.titre}</h3>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                    <Link to={`/events/${r.event._id}`} style={{ color: 'inherit', textDecoration: 'none' }}
+                      onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                      onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                    >{r.event?.titre}</Link>
+                  </h3>
                   <span style={{
                     fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: 20,
                     background: r.statut === 'confirmée' ? '#dcfce7' : '#fee2e2',
@@ -114,7 +121,7 @@ export default function MesReservations() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                   <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem' }}>
-                    {((r.event?.prix || 0) * r.places).toLocaleString('fr-FR')} €
+                    Montant total : {((r.event?.prix || 0) * r.places).toLocaleString('fr-FR')} €
                   </span>
                   {r.statut === 'confirmée' && (
                     <button

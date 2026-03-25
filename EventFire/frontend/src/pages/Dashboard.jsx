@@ -107,7 +107,6 @@ export default function Dashboard() {
           icon={<TicketIcon size={20} />}
           value={(stats.totalTickets ?? 0).toLocaleString('fr-FR')}
           label="Billets vendus"
-          desc={`sur ${((stats.totalEvents ?? 0) * 100).toLocaleString('fr-FR')} places`}
           accentClass="purple"
         />
         <StatCard
